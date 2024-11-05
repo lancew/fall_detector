@@ -52,9 +52,10 @@ func analyzeSegment(segment gpx.GPXTrackSegment) []FallEvent {
 
 	// Parameters for fall detection
 	const (
-		speedThreshold    = 0.2  // meters per second
-		timeWindow       = 10   // seconds
-		elevationChange  = -0.5 // meters
+		speedThreshold    = 0.15  // meters per second
+		timeWindow       = 12    // seconds
+		elevationChange  = -0.3  // meters
+		speedChangeRate  = 0.1   // minimum speed change per second
 	)
 
 	for i := 1; i < len(segment.Points)-1; i++ {
@@ -69,10 +70,14 @@ func analyzeSegment(segment gpx.GPXTrackSegment) []FallEvent {
 		// Calculate time differences
 		timeDiff := next.Timestamp.Sub(prev.Timestamp).Seconds()
 
+		// Calculate rate of speed change
+		speedChange := (speedAfter - speedBefore) / timeDiff
+
 		// Check for sudden speed decrease and elevation drop within time window
 		if timeDiff <= timeWindow &&
 			speedBefore > speedThreshold &&
 			speedAfter < speedThreshold &&
+			speedChange < -speedChangeRate &&
 			next.Elevation.Value() != 0 && prev.Elevation.Value() != 0 &&
 			(next.Elevation.Value()-prev.Elevation.Value()) < elevationChange {
 
