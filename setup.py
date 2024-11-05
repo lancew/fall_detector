@@ -9,5 +9,5 @@ setup(
         'numpy==1.26.2',
     ],
     setup_requires=['pytest-runner'],
-    tests_require=['pytest==7.4.3'],
+    tests_require=['pytest==7.4.3', 'gpxpy==1.5.0'],
 )

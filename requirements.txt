@@ -2,3 +2,4 @@ gpxpy==1.5.0
 numpy==1.26.2
 pytest==7.4.3
 pytest-runner==6.0.0
+pytest-gpxpy==1.5.0
