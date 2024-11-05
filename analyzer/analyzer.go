@@ -73,7 +73,8 @@ func analyzeSegment(segment gpx.GPXTrackSegment) []FallEvent {
 		if timeDiff <= timeWindow &&
 			speedBefore > speedThreshold &&
 			speedAfter < speedThreshold &&
-			(next.Elevation-prev.Elevation) < elevationChange {
+			next.Elevation.Value() != 0 && prev.Elevation.Value() != 0 &&
+			(next.Elevation.Value()-prev.Elevation.Value()) < elevationChange {
 
 			falls = append(falls, FallEvent{
 				Timestamp: curr.Timestamp,
