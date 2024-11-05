@@ -52,10 +52,10 @@ func analyzeSegment(segment gpx.GPXTrackSegment) []FallEvent {
 
 	// Parameters for fall detection
 	const (
-		speedThreshold    = 0.15  // meters per second
-		timeWindow       = 12    // seconds
-		elevationChange  = -0.3  // meters
-		speedChangeRate  = 0.1   // minimum speed change per second
+		timeWindow          = 5     // seconds
+		elevationChange     = -0.5  // meters
+		maxHorizontalSpeed  = 0.3   // meters per second - max allowed horizontal movement
+		minVerticalSpeed    = 0.1   // meters per second - minimum vertical speed
 	)
 
 	for i := 1; i < len(segment.Points)-1; i++ {
@@ -63,22 +63,28 @@ func analyzeSegment(segment gpx.GPXTrackSegment) []FallEvent {
 		curr := segment.Points[i]
 		next := segment.Points[i+1]
 
-		// Calculate speed changes
-		speedBefore := calculateSpeed(prev, curr)
-		speedAfter := calculateSpeed(curr, next)
-
-		// Calculate time differences
+		// Calculate time difference
 		timeDiff := next.Timestamp.Sub(prev.Timestamp).Seconds()
 
-		// Calculate rate of speed change
-		speedChange := (speedAfter - speedBefore) / timeDiff
+		// Skip if time difference is too large
+		if timeDiff > timeWindow {
+			continue
+		}
 
-		// Check for sudden speed decrease and elevation drop within time window
-		if timeDiff <= timeWindow &&
-			speedBefore > speedThreshold &&
-			speedAfter < speedThreshold &&
-			speedChange < -speedChangeRate &&
-			next.Elevation.Value() != 0 && prev.Elevation.Value() != 0 &&
+		// Check if elevations are valid
+		if !next.Elevation.Valid() || !prev.Elevation.Valid() {
+			continue
+		}
+
+		// Calculate horizontal speed
+		horizontalSpeed := calculateHorizontalSpeed(prev, next)
+		
+		// Calculate vertical speed (negative means dropping)
+		verticalSpeed := (next.Elevation.Value() - prev.Elevation.Value()) / timeDiff
+		
+		// Check for vertical drop with minimal horizontal movement
+		if horizontalSpeed <= maxHorizontalSpeed &&
+			verticalSpeed < -minVerticalSpeed &&
 			(next.Elevation.Value()-prev.Elevation.Value()) < elevationChange {
 
 			falls = append(falls, FallEvent{
@@ -122,4 +128,13 @@ func calculateDistance(p1, p2 gpx.GPXPoint) float64 {
 
 func toRadians(degrees float64) float64 {
 	return degrees * math.Pi / 180
+}
+
+func calculateHorizontalSpeed(p1, p2 gpx.GPXPoint) float64 {
+	horizontalDistance := calculateDistance(p1, p2)
+	timeDiff := p2.Timestamp.Sub(p1.Timestamp).Seconds()
+	if timeDiff == 0 {
+		return 0
+	}
+	return horizontalDistance / timeDiff
 }
