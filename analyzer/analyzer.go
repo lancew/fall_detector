@@ -71,8 +71,8 @@ func analyzeSegment(segment gpx.GPXTrackSegment) []FallEvent {
 			continue
 		}
 
-		// Check if elevations exist
-		if next.Elevation == nil || prev.Elevation == nil {
+		// Check if elevations are present and valid
+		if !next.Elevation.NotNull() || !prev.Elevation.NotNull() {
 			continue
 		}
 
