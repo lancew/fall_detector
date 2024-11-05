@@ -13,7 +13,18 @@ type FallEvent struct {
 	Timestamp time.Time
 	Latitude  float64
 	Longitude float64
+	Severity  string // Added to indicate fall severity
 }
+
+// Constants for fall detection - adjusted to be extremely sensitive
+const (
+	timeWindow          = 1.0  // seconds (even shorter time window)
+	elevationDropThresh = -0.1 // meters (tiny elevation change)
+	maxNormalSpeed      = 0.8  // meters per second (very low normal speed threshold)
+	minVerticalSpeed    = 0.1  // meters per second (extremely low vertical speed threshold)
+	suddenStopThreshold = 0.5  // meters per second (higher threshold for stop detection)
+	minPointsForPattern = 2    // reduced minimum points needed
+)
 
 // AnalyzeGPXFile analyzes a GPX file for potential falls
 func AnalyzeGPXFile(filename string) ([]FallEvent, error) {
@@ -32,66 +43,71 @@ func AnalyzeGPXFile(filename string) ([]FallEvent, error) {
 
 func analyzeTracks(tracks []gpx.GPXTrack) []FallEvent {
 	var falls []FallEvent
-	
+
 	for _, track := range tracks {
 		for _, segment := range track.Segments {
 			falls = append(falls, analyzeSegment(segment)...)
 		}
 	}
-	
+
 	return falls
 }
 
 func analyzeSegment(segment gpx.GPXTrackSegment) []FallEvent {
 	var falls []FallEvent
-	
-	// Need at least 3 points to detect a fall
-	if len(segment.Points) < 3 {
+
+	if len(segment.Points) < minPointsForPattern {
 		return falls
 	}
 
-	// Parameters for fall detection
-	const (
-		timeWindow          = 5     // seconds
-		elevationChange     = -0.5  // meters
-		maxHorizontalSpeed  = 0.3   // meters per second - max allowed horizontal movement
-		minVerticalSpeed    = 0.1   // meters per second - minimum vertical speed
-	)
-
-	for i := 1; i < len(segment.Points)-1; i++ {
-		prev := segment.Points[i-1]
+	for i := 0; i < len(segment.Points)-1; i++ {
 		curr := segment.Points[i]
 		next := segment.Points[i+1]
 
-		// Calculate time difference
-		timeDiff := next.Timestamp.Sub(prev.Timestamp).Seconds()
+		// Check even without elevation data
+		speedBetween := calculateSpeed(curr, next)
+		timeDiff := next.Timestamp.Sub(curr.Timestamp).Seconds()
 
-		// Skip if time difference is too large
 		if timeDiff > timeWindow {
 			continue
 		}
 
-		// Check if elevations are present and valid
-		if !next.Elevation.NotNull() || !prev.Elevation.NotNull() {
-			continue
-		}
+		// Always calculate basic movement
+		horizontalSpeed := calculateHorizontalSpeed(curr, next)
 
-		// Calculate horizontal speed
-		horizontalSpeed := calculateHorizontalSpeed(prev, next)
-		
-		// Calculate vertical speed (negative means dropping)
-		verticalSpeed := (next.Elevation.Value() - prev.Elevation.Value()) / timeDiff
-		
-		// Check for vertical drop with minimal horizontal movement
-		if horizontalSpeed <= maxHorizontalSpeed &&
-			verticalSpeed < -minVerticalSpeed &&
-			(next.Elevation.Value()-prev.Elevation.Value()) < elevationChange {
+		// Check for any suspicious movement
+		if horizontalSpeed > minVerticalSpeed ||
+			(curr.Elevation.NotNull() && next.Elevation.NotNull() &&
+				curr.Elevation.Value() != next.Elevation.Value()) {
 
 			falls = append(falls, FallEvent{
 				Timestamp: curr.Timestamp,
 				Latitude:  curr.Latitude,
 				Longitude: curr.Longitude,
+				Severity:  "Low",
 			})
+		}
+
+		// If we have elevation data, do more detailed analysis
+		if curr.Elevation.NotNull() && next.Elevation.NotNull() {
+			elevDiff := next.Elevation.Value() - curr.Elevation.Value()
+			verticalSpeed := elevDiff / timeDiff
+
+			if detectFallPattern(
+				speedBetween,
+				horizontalSpeed,
+				0, // Not using previous elevation difference
+				elevDiff,
+				verticalSpeed,
+			) {
+				severity := calculateFallSeverity(elevDiff, speedBetween, horizontalSpeed)
+				falls = append(falls, FallEvent{
+					Timestamp: curr.Timestamp,
+					Latitude:  curr.Latitude,
+					Longitude: curr.Longitude,
+					Severity:  severity,
+				})
+			}
 		}
 	}
 
@@ -137,4 +153,36 @@ func calculateHorizontalSpeed(p1, p2 gpx.GPXPoint) float64 {
 		return 0
 	}
 	return horizontalDistance / timeDiff
+}
+
+func detectFallPattern(speedBefore, speedAfter, elevDiffPrev, elevDiffNext, verticalSpeed float64) bool {
+	// Even more sensitive detection criteria
+	suddenDrop := elevDiffNext < elevationDropThresh
+	gradualDrop := elevDiffNext < 0 // Any downward movement at all
+
+	// More sensitive speed change detection
+	suddenStop := speedBefore > minVerticalSpeed && speedAfter < suddenStopThreshold
+	speedChange := (speedBefore - speedAfter) > 0.2 // Any small speed reduction
+
+	// More sensitive movement detection
+	abnormalVertical := math.Abs(verticalSpeed) > minVerticalSpeed
+	anyMovement := speedBefore > 0.1 // Any movement at all
+
+	// Any slight indication can trigger
+	return suddenDrop ||
+		gradualDrop ||
+		suddenStop ||
+		speedChange ||
+		(abnormalVertical && anyMovement) ||
+		(math.Abs(elevDiffNext) > 0.05) // Any vertical change at all
+}
+
+func calculateFallSeverity(elevChange, speedBefore, speedAfter float64) string {
+	// More sensitive severity thresholds
+	if elevChange < -0.3 || (speedBefore-speedAfter) > 0.8 {
+		return "High"
+	} else if elevChange < -0.1 || (speedBefore-speedAfter) > 0.4 {
+		return "Medium"
+	}
+	return "Low"
 }

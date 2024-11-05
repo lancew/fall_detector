@@ -35,7 +35,7 @@ func main() {
 
 	fmt.Printf("Detected %d potential falls:\n", len(falls))
 	for i, fall := range falls {
-		fmt.Printf("%d. Fall detected at position (%.6f, %.6f) at time %v\n",
-			i+1, fall.Latitude, fall.Longitude, fall.Timestamp)
+		fmt.Printf("%d. %s severity fall detected at position (%.6f, %.6f) at time %v\n",
+			i+1, fall.Severity, fall.Latitude, fall.Longitude, fall.Timestamp)
 	}
 }
