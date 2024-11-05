@@ -44,9 +44,9 @@ def detect_falls(gpx_file):
                 speed_drop = speed_before - speed_after
                 
                 # Thresholds for fall detection
-                if (speed_drop > 6.0 and  # Speed drop > 6 m/s
-                    abs(elev_change) > 1.5 and  # Elevation change > 1.5m
-                    speed_before > 3.0):  # Initial speed > 3 m/s
+                if (speed_drop > 8.0 and  # Speed drop > 8 m/s
+                    abs(elev_change) > 2.0 and  # Elevation change > 2.0m
+                    speed_before > 4.0):  # Initial speed > 4 m/s
                     
                     falls.append({
                         'time': curr_point.time,
