@@ -52,9 +52,9 @@ func analyzeSegment(segment gpx.GPXTrackSegment) []FallEvent {
 
 	// Parameters for fall detection
 	const (
-		speedThreshold    = 0.5  // meters per second
-		timeWindow       = 5    // seconds
-		elevationChange  = -2.0 // meters
+		speedThreshold    = 0.3  // meters per second
+		timeWindow       = 8    // seconds
+		elevationChange  = -1.0 // meters
 	)
 
 	for i := 1; i < len(segment.Points)-1; i++ {
