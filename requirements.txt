@@ -1,2 +1,4 @@
 gpxpy==1.5.0
 numpy==1.24.3
+gpxpy==1.5.0
+numpy==1.24.3
