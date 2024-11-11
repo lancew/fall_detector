@@ -8,5 +8,7 @@ One day I uploaded bike ride to Strava and was surprised when their new AI summa
 So I thought I'd explore how you might do this yourself.
 
 This script is a quick method of doing so in Python.
+Then I did it again in Go.
+
 
 Aider and Cursor IDE helped me write the script.
