@@ -10,3 +10,39 @@
 
 # 2024-11-05 22:13:01.424288
 +/run git add -A
+
+# 2024-11-05 22:13:01.540012
++/run git commit -m "chore: Clean repository, keep only GPX file"
+
+# 2024-11-05 22:13:29.365836
++setup project to use virtual python environment
+
+# 2024-11-05 22:13:49.258913
++/run chmod +x setup.sh
+
+# 2024-11-05 22:13:49.374049
++/run ./setup.sh
+
+# 2024-11-05 22:14:34.458890
++/undo last change
+
+# 2024-11-05 22:14:37.980700
++undo last change
+
+# 2024-11-05 22:14:49.017928
++/run ./setup.sh
+
+# 2024-11-05 22:15:22.701791
++remove all files except the gpx file
+
+# 2024-11-05 22:15:39.502753
++/run git rm .aider.chat.history.md .aider.input.history requirements.txt setup.sh
+
+# 2024-11-05 22:15:39.618833
++/run git commit -m "Remove all files except GPX file"
+
+# 2024-11-05 22:15:44.858287
++s
+
+# 2024-11-05 22:15:48.094104
++exit
